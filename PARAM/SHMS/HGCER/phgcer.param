@@ -1,7 +1,12 @@
-phgcer_width = 50, 50
+; Number of heavy gas Cherenkov PMT's
+phgcer_tot_pmts = 4
 
-phgcer_adc_to_npe = 1/145.0, 1/122.0
+phgcer_width = 50, 50,50, 50
 
+;phgcer_adc_to_npe = 1/128.8, 1/130.6,1/128.99, 1/128.99
+
+; Garth H. gain calibration from run 486, March 9 2017
+phgcer_adc_to_npe = 1/436., 1/393., 1/364., 1/372.
 
 phgcer_chi2max = 50.
 phgcer_beta_min = 0.8
@@ -20,5 +25,5 @@ phgcer_region =   30,  -30,   0,
                 .1,   .1,  .1,
                 .1,   .1,  .1
 
-phgcer_ped_limit =  1000,1000
+phgcer_ped_limit =  1000,1000, 1000,1000
 	       
