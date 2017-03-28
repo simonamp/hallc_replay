@@ -19,3 +19,7 @@ pdebugstubchisq = 0; Dump chi2 of left-right fits
   pcer_min_peds  = 500
   paero_min_peds  = 500
   pmisc_min_peds  = 500
+; pdumptof added by Simona to get hodo inp file for calib
+  pdumptof = 1
+; pdumptof_filename added by Simona to get inp file name for hodo calib
+  pdumptof_filename = "test_calib_inp_file_hodo_shms"

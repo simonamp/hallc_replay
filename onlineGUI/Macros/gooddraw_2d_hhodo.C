@@ -55,6 +55,7 @@ void UserScript()
   make histogram of plane ADC versus position in perpendicalur plane
    */
   TH2F* hadc_dis[NPLANES*MAXBARS][2];
+  TH2F* htdc_dis[NPLANES*MAXBARS][2];
   Int_t dis_bin[4]={10,16,10,16};
   Double_t dis_min[4];
   Double_t dis_max[4];
@@ -109,7 +110,7 @@ Efficiency is ratio of did/should which is calculated using hodo_efficiency.C
 	      TString i2dbarname = Form("%d",ibar+1);
 	      TString h2dttitle= "TDC 1ns/chan "+plane_names[ip]+i2dbarname+"; Neg ; Pos ";
 	      TString h2dtname="uh2dtdc"+plane_names[ip]+i2dbarname;
-              htdc_tdc[ip*MAXBARS+ibar]= new TH2F(h2dtname,h2dttitle,200,25,75,200,25,75.);
+              htdc_tdc[ip*MAXBARS+ibar]= new TH2F(h2dtname,h2dttitle,80,10,50,80,10,50.);
 		TString h2dnegtitle= "Neg PMT Pad  "+plane_names[ip]+i2dbarname+"; plane "+plane_check_names[ip]+" paddles; Counts neg ";
 	        TString h2dnegname="uhdidneg"+plane_names[ip]+i2dbarname;
                  hgood_neg_did[ip][ibar]= new TH1F(h2dnegname,h2dnegtitle,nbars_check[ip],1,nbars_check[ip]+1);
@@ -147,11 +148,34 @@ Efficiency is ratio of did/should which is calculated using hodo_efficiency.C
 	      TString h2dttitle= "Pos PMT Pad "+plane_names[ip]+i2dbarname+"; Pos (cm); Adc (pC)";
 	      TString h2dtname="uh2dadcvdispos"+plane_names[ip]+i2dbarname;
 	      hadc_dis[ip*MAXBARS+ibar][1]= new TH2F(h2dtname,h2dttitle,dis_bin[ip],dis_sign[ip]*dis_center_pad1[ip]-dis_space/2.,-dis_sign[ip]*dis_center_pad1[ip]+dis_space/2.,50,0,100);
+	      TString h2dttitle= "Neg PMT Pad "+plane_names[ip]+i2dbarname+"; Pos (cm); Tdc (ns)";
+	      TString h2dtname="uh2dtdcvdisneg"+plane_names[ip]+i2dbarname;
+	      htdc_dis[ip*MAXBARS+ibar][0]= new TH2F(h2dtname,h2dttitle,dis_bin[ip],dis_sign[ip]*dis_center_pad1[ip]-dis_space/2.,-dis_sign[ip]*dis_center_pad1[ip]+dis_space/2.,50,0,50);
+	      TString h2dttitle= "Pos PMT Pad "+plane_names[ip]+i2dbarname+"; Pos (cm); Tdc (ns)";
+	      TString h2dtname="uh2dtdcvdispos"+plane_names[ip]+i2dbarname;
+	      htdc_dis[ip*MAXBARS+ibar][1]= new TH2F(h2dtname,h2dttitle,dis_bin[ip],dis_sign[ip]*dis_center_pad1[ip]-dis_space/2.,-dis_sign[ip]*dis_center_pad1[ip]+dis_space/2.,50,0,50);
 	    }
   }
   // set up branches
-
-  for(UInt_t ip = 0; ip < NPLANES; ip++) {
+          Double_t betanotrack;
+	  TString beta_name = SPECTROMETER+"."+DETECTOR+".betanotrack";
+	  T->SetBranchAddress(beta_name, &betanotrack);
+          TH1F* hbeta= new TH1F("hbeta","; Beta ;COunts",120,-1.1,1.1);
+          Double_t fptime[4];
+	  TString fpname = SPECTROMETER+"."+DETECTOR+".1x.fptime";
+	  T->SetBranchAddress(fpname, &fptime[0]);
+	  TString fpname = SPECTROMETER+"."+DETECTOR+".1y.fptime";
+	  T->SetBranchAddress(fpname, &fptime[1]);
+	  TString fpname = SPECTROMETER+"."+DETECTOR+".2x.fptime";
+	  T->SetBranchAddress(fpname, &fptime[2]);
+	  TString fpname = SPECTROMETER+"."+DETECTOR+".2y.fptime";
+	  T->SetBranchAddress(fpname, &fptime[3]);
+          TH1F* hfptime[4];
+          hfptime[0]= new TH1F("fptime1x","; fptime 1x ;COunts",40,20,40);
+          hfptime[1]= new TH1F("fptime1y","; fptime 1y ;COunts",40,20,40);
+          hfptime[2]= new TH1F("fptime2x","; fptime 2x ;COunts",40,20,40);
+          hfptime[3]= new TH1F("fptime2y","; fptime 2y ;COunts",40,20,40);
+ for(UInt_t ip = 0; ip < NPLANES; ip++) {
 	  TString base2_name = SPECTROMETER+"."+DETECTOR+"."+plane_names[ip];
 	  TString ndata_name = "Ndata."+base2_name+".GoodPaddle";
 	  T->SetBranchAddress(ndata_name, &nhits[ip]);
@@ -183,8 +207,12 @@ Efficiency is ratio of did/should which is calculated using hodo_efficiency.C
   } // ip
   // Loop over the events, filling the histograms
   Bool_t good_should;
+  Bool_t good_pl[4];
+  Bool_t good_other_ch[4];
+  Bool_t good_ch[4];
   Double_t good_pad[4];
   Double_t good_adc[4][2];
+  Double_t good_tdc[4][2];
   Int_t check_plane[4]={1,0,3,2};
   Bool_t good_neg[4][16],good_pos[4][16];
   for(UInt_t iev = 0, N = T->GetEntries(); iev < N; iev++) {
@@ -194,32 +222,51 @@ Efficiency is ratio of did/should which is calculated using hodo_efficiency.C
     //
        good_should=kFALSE;
       for(UInt_t ip = 0; ip < NPLANES; ip++){ 
+	good_pl[ip]=kFALSE;
+	good_ch[ip]=kFALSE;
+	good_other_ch[ip]=kFALSE;
      for(UInt_t ib = 0; ib < nbars[ip]; ib++){ 
        good_neg[ip][ib]=kFALSE;
        good_pos[ip][ib]=kFALSE;
      }
      }
     if (nhits[0]==1&&nhits[1]==1&&nhits[2]==1&&nhits[3]==1) good_should = kTRUE;
+    if (nhits[1]==1&&nhits[2]==1&&nhits[3]==1) good_pl[0] = kTRUE;
+    if (nhits[0]==1&&nhits[2]==1&&nhits[3]==1) good_pl[1] = kTRUE;
+    if (nhits[0]==1&&nhits[1]==1&&nhits[3]==1) good_pl[2] = kTRUE;
+    if (nhits[0]==1&&nhits[1]==1&&nhits[2]==1) good_pl[3] = kTRUE;
+    if (nhits[2]==1&&nhits[3]==1) good_other_ch[0]=kTRUE;
+    if (nhits[2]==1&&nhits[3]==1) good_other_ch[1]=kTRUE;
+    if (nhits[0]==1&&nhits[1]==1) good_other_ch[2]=kTRUE;
+    if (nhits[0]==1&&nhits[1]==1) good_other_ch[3]=kTRUE;
+    if (nhits[0]==1&&nhits[1]==1) good_ch[0]=kTRUE;
+    if (nhits[0]==1&&nhits[1]==1) good_ch[1]=kTRUE;
+    if (nhits[2]==1&&nhits[3]==1) good_ch[2]=kTRUE;
+    if (nhits[2]==1&&nhits[3]==1) good_ch[3]=kTRUE;
       for(UInt_t ip = 0; ip < NPLANES; ip++){ 
 	//	 cout << iev << " " << ip << " " << nhits[ip]<< endl;
 		for(Int_t ihit = 0; ihit < nhits[ip]; ihit++)  {
  		UInt_t bar = TMath::Nint(paddles[ip][ihit]) - 1;
 		Double_t tdc_neg_val = tdc_values[ip][0][1][ihit];
-		Double_t tdc_pos_val =tdc_values[ip][1][1][ihit];
+		Double_t tdc_pos_val = tdc_values[ip][1][1][ihit];
 		Double_t adc_neg_val = adc_values[ip][0][0][ihit]*adcbit_to_pC;
 		Double_t adc_pos_val = adc_values[ip][1][0][ihit]*adcbit_to_pC;
 		//		cout << " " << ihit << " " << bar << " "  << tdc_neg_val << endl;
-		htdc_tdc[ip*MAXBARS+bar]->Fill(tdc_neg_val,tdc_pos_val);
-		//		if (tdc_neg_val > 0 && tdc_pos_val >0) hadc_adc[ip*MAXBARS+bar]->Fill(adc_neg_val,adc_pos_val);
-		hadc_adc[ip*MAXBARS+bar]->Fill(adc_neg_val,adc_pos_val);
-		if (tdc_pos_val>0 && tdc_neg_val>0 ) {
+		if (!good_should && tdc_neg_val > 0 && tdc_pos_val >0) hadc_adc[ip*MAXBARS+bar]->Fill(adc_neg_val,adc_pos_val);
+				//hadc_adc[ip*MAXBARS+bar]->Fill(adc_neg_val,adc_pos_val);
+		if (good_should && tdc_pos_val>0 && tdc_neg_val>0 ) {
+  		  htdc_tdc[ip*MAXBARS+bar]->Fill(tdc_neg_val,tdc_pos_val);
                   hadc_adc_good[ip*MAXBARS+bar]->Fill(adc_neg_val,adc_pos_val);
 		  hadc_tdc[ip*MAXBARS+bar][0]->Fill(adc_neg_val,tdc_neg_val);
 		  hadc_tdc[ip*MAXBARS+bar][1]->Fill(adc_pos_val,tdc_pos_val);
+		  hbeta->Fill(betanotrack);
+		  hfptime[ip]->Fill(fptime[ip]);
 		}
 		good_pad[ip]=bar+1;
                 good_adc[ip][0]=adc_neg_val;
                 good_adc[ip][1]=adc_pos_val;
+                good_tdc[ip][0]=tdc_neg_val;
+                good_tdc[ip][1]=tdc_pos_val;
                 if (good_should && tdc_neg_val>0 ) good_neg[ip][bar]=kTRUE;
                 if (good_should && tdc_pos_val>0 ) good_pos[ip][bar]=kTRUE;
 		}
@@ -238,12 +285,52 @@ Efficiency is ratio of did/should which is calculated using hodo_efficiency.C
                hgood_pos_did[ip][ib]->Fill(good_pad[check_plane[ip]]);
                hadc_dis[ip*MAXBARS+ib][0]->Fill(dis_center_pad1[ip]+dis_sign[ip]*dis_space*(good_pad[check_plane[ip]]-1),good_adc[ip][0]);
                hadc_dis[ip*MAXBARS+ib][1]->Fill(dis_center_pad1[ip]+dis_sign[ip]*dis_space*(good_pad[check_plane[ip]]-1),good_adc[ip][1]);
+               htdc_dis[ip*MAXBARS+ib][0]->Fill(dis_center_pad1[ip]+dis_sign[ip]*dis_space*(good_pad[check_plane[ip]]-1),good_tdc[ip][0]);
+               htdc_dis[ip*MAXBARS+ib][1]->Fill(dis_center_pad1[ip]+dis_sign[ip]*dis_space*(good_pad[check_plane[ip]]-1),good_tdc[ip][1]);
 	  }
  	  }
       }
      }
   } // loop over entries
-    //
+  Double_t tof[4]={2.6,3.3,10.0,10.6};
+  Double_t timeset=32.;
+          for(UInt_t ib = 0; ib < 16; ib++){ 
+	    TH1D * proj1x=htdc_dis[ib][0]->ProjectionY();
+	    TH1D * proj2x=htdc_dis[2*MAXBARS+ib][0]->ProjectionY();
+            if (ib < 10) {
+	    TH1D * proj1y=htdc_dis[1*MAXBARS+ib][0]->ProjectionY();
+	    TH1D * proj2y=htdc_dis[3*MAXBARS+ib][0]->ProjectionY();
+	    cout << (timeset-tof[0]-proj1x->GetMaximumBin()) << "," << (timeset-tof[1]-proj1y->GetMaximumBin()) << "," <<timeset-tof[2]-proj2x->GetMaximumBin() << "," << timeset-tof[3]-proj2y->GetMaximumBin() << ","<< endl;
+	    } else {
+	    cout << timeset-tof[0]-proj1x->GetMaximumBin() << ",0.0," << timeset-tof[2]-proj2x->GetMaximumBin() << ",0.0,"<< endl;
+	    }
+     } 
+          for(UInt_t ib = 0; ib < 16; ib++){ 
+	    TH1D * proj1x=htdc_dis[ib][1]->ProjectionY();
+	    TH1D * proj2x=htdc_dis[2*MAXBARS+ib][1]->ProjectionY();
+            if (ib < 10) {
+	    TH1D * proj1y=htdc_dis[1*MAXBARS+ib][1]->ProjectionY();
+	    TH1D * proj2y=htdc_dis[3*MAXBARS+ib][1]->ProjectionY();
+	    cout << (timeset-tof[0]-proj1x->GetMaximumBin()) << "," << timeset-tof[1]-proj1y->GetMaximumBin() << "," << timeset-tof[2]-proj2x->GetMaximumBin() << "," << timeset-tof[3]-proj2y->GetMaximumBin() << ","<< endl;
+	    } else {
+	    cout << timeset-tof[0]-proj1x->GetMaximumBin() << ",0.0," << timeset-tof[2]-proj2x->GetMaximumBin() << ",0.0,"<< endl;
+	    }
+     } 
+ 
+  /*
+  TObjArray HList(0);
+  TFile *hroot = new TFile("temp_hist.root","recreate");
+     for(UInt_t ip = 0; ip < NPLANES; ip++){ 
+          for(UInt_t ib = 0; ib < nbars[ip]; ib++){ 
+	    HList.Add(hgood_neg_did[ip][ib]);
+	    HList.Add(hgood_pos_did[ip][ib]);
+	    HList.Add(hgood_neg_should[ip][ib]);
+	    HList.Add(hgood_pos_should[ip][ib]);
+     } 
+     } 
+	  HList.Write();
+	  hroot->Close();
+  */
   return;
 }
 
