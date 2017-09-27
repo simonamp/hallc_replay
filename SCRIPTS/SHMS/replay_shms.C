@@ -31,6 +31,8 @@ void replay_shms(Int_t RunNumber=0, Int_t MaxEvent=0) {
 
   // Load params for SHMS trigger configuration
   gHcParms->Load("PARAM/TRIG/tshms.param");
+ // Parameters for hodo calibration
+  //  gHcParms->Load("PARAM/SHMS/HODO/ptofcal.param");
 
   // Load custom tracking params
   //gHcParms->Load("PARAM/SHMS/GEN/hgoldtrack.param");
@@ -62,8 +64,8 @@ void replay_shms(Int_t RunNumber=0, Int_t MaxEvent=0) {
   THcCherenkov* hgcer = new THcCherenkov("hgcer", "Heavy Gas Cherenkov");
   SHMS->AddDetector(hgcer);
   // Add Heavy Gas Cherenkov to SHMS apparatus
-  THcAerogel* aero = new THcAerogel("aero", "Aerogel");
-  SHMS->AddDetector(aero);
+  //  THcAerogel* aero = new THcAerogel("aero", "Aerogel");
+  //  SHMS->AddDetector(aero);
   // Add calorimeter to SHMS apparatus
   THcShower* cal = new THcShower("cal", "Calorimeter");
   SHMS->AddDetector(cal);

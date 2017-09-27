@@ -32,6 +32,9 @@ void replay_phodo_test_stand(Int_t RunNumber=0, Int_t MaxEvent=0) {
   // Load params for HMS trigger configuration
   gHcParms->Load("PARAM/TRIG/tshms.param");
 
+  // Parameters for hodo calibration
+  gHcParms->Load("PARAM/SHMS/HODO/ptofcal.param");
+
   // Load the Hall C style detector map
   gHcDetectorMap = new THcDetectorMap();
   gHcDetectorMap->Load("MAPS/SHMS/DETEC/phodo_ptrig.map");
